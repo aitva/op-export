@@ -1,6 +1,6 @@
 # 1Password Export
 
-Command line tool to export &amp; print 1Password vaults.
+Command line tool to export &amp; print items from 1Password.
 
 ## Instructions
 

@@ -13,3 +13,5 @@
 
 # Ignore `go build` output
 /op-export
+/*.html
+/*.css
