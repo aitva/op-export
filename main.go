@@ -80,7 +80,7 @@ func main() {
 func createView(cssPath string) (view *View, done func(), err error) {
 	cfg, done := ViewConfigAutoReload()
 	view = NewView(
-		"Password Export",
+		"1Password Export",
 		ViewConfigAddDate(),
 		ViewConfigAddURL(),
 		ViewConfigLinkCSS(cssPath),
