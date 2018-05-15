@@ -33,7 +33,72 @@ const cssTmpl = `.main {
 }
 .dl__dd {
 	margin-left: 1em;
+}
+.loading {
+	display: grid;
+	grid-template-columns: auto auto;
+	justify-content: center;
+	margin-top: 2em;
+}
+.loading__text {
+	margin-left: 1em;
 }`
+
+const loadingTmpl = `<!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL -->
+<svg width="58" height="58" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
+	<g fill="none" fill-rule="evenodd">
+		<g transform="translate(2 1)" stroke="#000" stroke-width="1.5">
+			<circle cx="42.601" cy="11.462" r="5" fill-opacity="1" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="1;0;0;0;0;0;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="49.063" cy="27.063" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;1;0;0;0;0;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="42.601" cy="42.663" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;1;0;0;0;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="27" cy="49.125" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;0;1;0;0;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="11.399" cy="42.663" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;0;0;1;0;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="4.938" cy="27.063" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;0;0;0;1;0;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="11.399" cy="11.462" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;0;0;0;0;1;0" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+			<circle cx="27" cy="5" r="5" fill-opacity="0" fill="#000">
+				<animate attributeName="fill-opacity"
+					begin="0s" dur="1.3s"
+					values="0;0;0;0;0;0;0;1" calcMode="linear"
+					repeatCount="indefinite" />
+			</circle>
+		</g>
+	</g>
+</svg>`
 
 const htmlTmpl = `<!doctype html>
 <html>
@@ -58,6 +123,12 @@ const htmlTmpl = `<!doctype html>
 				<p class="header__date">{{ . }}</p>
 				{{- end }}
 			</header>
+			{{ with .LoadingSVG -}}
+			<div class="loading">
+				<object class="loading__img">{{.}}</object>
+				<h2 class="loading__text">retriving passwords</h2>
+			</div>
+			{{- end }}
 			{{ range .Items }}
 			<article class="item">
 				<h2 class="item__title">{{ .Title }}</h2>
@@ -79,6 +150,13 @@ const htmlTmpl = `<!doctype html>
 			</article>
 			{{ end }}
 		</main>
+		{{ with .LoadingSVG -}}
+		<script>
+			window.setInterval(() => {
+				window.location.reload()
+			}, 2000);
+		</script>
+		{{- end }}
 	</body>
 </html>`
 
@@ -106,11 +184,27 @@ func ViewConfigInlineCSS() ViewConfig {
 	}
 }
 
-// ViewConfigLinkCSS link a stylesheet with the HTML.
+// ViewConfigLinkCSS links a stylesheet with the HTML.
 func ViewConfigLinkCSS(path string) ViewConfig {
 	return func(v *View) {
 		v.CSSPath = path
 	}
+}
+
+// ViewConfigAutoReload enables auto reload of the webpage.
+// The done function should be call to stop auto-reload.
+func ViewConfigAutoReload() (cfg ViewConfig, done func()) {
+	var view *View
+	cfg = func(v *View) {
+		view = v
+		v.LoadingSVG = loadingTmpl
+	}
+	done = func() {
+		if view != nil {
+			view.LoadingSVG = ""
+		}
+	}
+	return
 }
 
 // ViewItem contains information to display to the user.
@@ -151,13 +245,14 @@ type ViewSectionField struct {
 
 // View represents the data used to render data to the user.
 type View struct {
-	Title   string
-	Date    string
-	ShowURL bool
-	CSS     template.CSS
-	CSSPath string
-	Items   []ViewItem
-	tmpl    *template.Template
+	Title      string
+	Date       string
+	ShowURL    bool
+	CSS        template.CSS
+	CSSPath    string
+	LoadingSVG template.HTML
+	Items      []ViewItem
+	tmpl       *template.Template
 }
 
 // NewView instanciates a new view.

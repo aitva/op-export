@@ -6,6 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+)
+
+const (
+	htmlPath = "out.html"
+	cssPath  = "out.css"
 )
 
 var (
@@ -19,13 +25,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	view, done, err := createView(cssPath)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	file, err := os.Create(htmlPath)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer file.Close()
+	err = view.RenderHTML(file, nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println("open " + getFileURI(htmlPath) + " in your browser")
+
 	items, err := listItems()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	filtered := items[:]
+	filtered := items[:0]
 	for _, item := range items {
 		if item.TemplateUUID != TemplateUUIDLogin {
 			continue
@@ -35,45 +58,55 @@ func main() {
 			fmt.Printf("fail to get details for %q\n", item.Overview.Title)
 			continue
 		}
-		fmt.Println(item)
 		filtered = append(filtered, item)
-	}
-
-	cssPath := "out.css"
-	view := NewView(
-		"Password Export",
-		ViewConfigAddDate(),
-		ViewConfigAddURL(),
-		ViewConfigLinkCSS(cssPath),
-	)
-	{
-		file, err := os.Create("out.html")
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		defer file.Close()
-
+		file.Truncate(0)
 		err = view.RenderHTML(file, filtered)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
-	{
-		file, err := os.Create(cssPath)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		defer file.Close()
 
-		err = view.WriteCSS(file)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	done()
+	file.Truncate(0)
+	err = view.RenderHTML(file, filtered)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+	fmt.Printf("wrote %d password into %s\n", len(filtered), htmlPath)
+}
+
+func createView(cssPath string) (view *View, done func(), err error) {
+	cfg, done := ViewConfigAutoReload()
+	view = NewView(
+		"Password Export",
+		ViewConfigAddDate(),
+		ViewConfigAddURL(),
+		ViewConfigLinkCSS(cssPath),
+		cfg,
+	)
+
+	file, err := os.Create(cssPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer file.Close()
+
+	err = view.WriteCSS(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	return
+}
+
+func getFileURI(ressource string) string {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	path := filepath.Join(dir, ressource)
+	return "file://" + path
 }
 
 func listItems() (items []*Item, err error) {
