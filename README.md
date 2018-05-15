@@ -1,6 +1,11 @@
 # 1Password Export
 
-Command line tool to export &amp; print items from 1Password.
+I did not find an easy way to print all my passwords. So, I have built
+this small app which query the 1Password server using their command line tool.
+
+The app opens a webpage in your browser serving the passwords, so nothing
+is written on your disk. But, there is an option to save the passwords
+as CSV or HTML file.
 
 ## Instructions
 
